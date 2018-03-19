@@ -24,8 +24,8 @@ package ICD is
 	type BeforeHistoryType is array (Integer range 1..BEFORE_HISTORY_LENGTH) of Network.RateRecord;
 
 	type Settings is record
-		TachBound : Integer;
-		JoulesToDeliver :Integer;
+		TachBound : Measures.BPM;
+		JoulesToDeliver :Measures.Joules;
 
 	end record;
 
@@ -44,9 +44,19 @@ package ICD is
 
 	procedure Init(ICDInst: out ICDType);
 
-	function IsTachycardia(Rate: in Measures.BPM) return Boolean;
+	function IsTachycardia(Rate: in Measures.BPM; ICDInst: in ICDType) return Boolean;
 
-	function IsVenFibrillation(ICDInst : in out ICDType) return Boolean; 
+    function IsVenFibrillation(ICDInst : in out ICDType) return Boolean; 
+
+    procedure Off(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType);
+
+    procedure On(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType; Hrt: in Heart.HeartType);
+
+	function ReadRateHistory(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return Network.NetworkMessage;
+
+	function ReadSettings(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return  Network.NetworkMessage;
+
+	function ChangeSettings(Msg: in Network.NetworkMessage; ICDInst : in out ICDType) return Network.NetworkMessage;
 
 	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType );
 

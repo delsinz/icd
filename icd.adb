@@ -14,7 +14,7 @@ package body ICD is
 		ICDInst.CurrentTime := 0;
 		ICDInst.IsModeOn := False;
 		ICDInst.ICDSettings.TachBound := DEFAULT_TACH_BOUND;
-		ICDInst.ICDSettings.JoulesToDeliver = DEFAULT_JOULES_TO_DELIVER;
+		ICDInst.ICDSettings.JoulesToDeliver := DEFAULT_JOULES_TO_DELIVER;
 
 		for I in Integer range 1..2 loop
 			ICDInst.RateHis(I).Rate := -1;
@@ -33,7 +33,7 @@ package body ICD is
 
 
 	-- function used to detect tachycardia
-	function IsTachycardia(Rate: in Measures.BPM, ICDInst: in ICDType) return Boolean is		
+	function IsTachycardia(Rate: in Measures.BPM; ICDInst: in ICDType) return Boolean is		
 	begin -- DetectTach
 		if Rate > ICDInst.ICDSettings.TachBound then
 			return True;
@@ -83,20 +83,7 @@ package body ICD is
 	--procedure ProcessMessage(MsgType :in Networks.NetworkMessageType) is
 		
 	--begin -- ProcessMessage
-	--	case MsgType is
-	--		when ModeOn =>
-			
-	--		when ModeOff =>
-
-	--		when ReadRateHistoryRequest =>
-
-	--		when ReadSettingsRequest => 
-
-	--		when ChangeSettingsRequest => 
-
-	--		when others =>
-	--			raise Ada.Assertions.Assertion_Error;
-	--	end case;
+	--	c
 		
 	--end ProcessMessage;
 	procedure Off(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType) is
@@ -108,8 +95,7 @@ package body ICD is
 		ICDInst.IsModeOn := False;
 	end Off;
 
-	procedure On(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType, Hrt: Heart.HeartType) is
-		
+	procedure On(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType; Hrt: in Heart.HeartType) is
 	begin -- On
 		HRM.On(HRMInst, Hrt);
 		ImpulseGenerator.On(Gen);
@@ -117,10 +103,10 @@ package body ICD is
 	end On;
 
 	function ReadRateHistory(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return Network.NetworkMessage is
-		Response : Network.NetworkMessage(ReadRateHistoryRequest);
+		Response : Network.NetworkMessage(ReadRateHistoryResponse);
 	begin -- ReadRateHistory
 		Response.HDestination := Msg.HSource;
-		Response.RateHistory := ICDInst.RateHis;
+		Response.History := ICDInst.RateHis;
 		return Response;
 	end ReadRateHistory;
 
@@ -132,12 +118,16 @@ package body ICD is
 		Response.RTachyBound := ICDInst.ICDSettings.TachBound;
 		Response.RJoulesToDeliver := ICDInst.ICDSettings.JoulesToDeliver;
 		return Response;
-	end name;
+	end ReadSettings;
 
-
-
-
-
+	function ChangeSettings(Msg: in Network.NetworkMessage; ICDInst : in out ICDType) return Network.NetworkMessage is
+		Response : Network.NetworkMessage(ChangeSettingsResponse);
+	begin -- ChangeSettings
+		Response.CDestination := Msg.CSource;
+		ICDInst.ICDSettings.TachBound := Msg.CTachyBound;
+		ICDInst.ICDSettings.CJoulesToDeliver := Msg.CJoulesToDeliver;
+		return Response;
+	end ChangeSettings;
 
 
 	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; Hrt: in out HeartType) is
