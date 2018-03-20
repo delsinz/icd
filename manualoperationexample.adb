@@ -60,7 +60,7 @@ begin
    ImpulseGenerator.On(Generator);
    
    -- Set the new impulse to 0
-   ImpulseGenerator.SetImpulse(Generator, 0); 
+   ImpulseGenerator.SetImpulse(Generator, 2); 
    
    -- Loop 100 times with zero joule impulse
    for I in Integer range 0..100 loop
