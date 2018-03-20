@@ -1,27 +1,30 @@
 with HRM;
 with Measures; use Measures;
 with ImpulseGenerator;
-with Network; 
+with Network; use Network;
 with Heart;
+with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Integer_Text_IO; use Ada.Integer_Text_IO;
 
 package body ICD is
 	
 
 	procedure Init(ICDInst: out ICDType) is		
 	begin -- Init
-		ICDInst.Rate := Measures.BPM'First;
+		--ICDInst.Rate := Measures.BPM'First;
 		ICDInst.Impulse := Measures.Joules'First; 	
 		ICDInst.CurrentTime := 0;
 		ICDInst.IsModeOn := False;
+		--ICDInst.IsModeOn := True;
 		ICDInst.ICDSettings.TachBound := DEFAULT_TACH_BOUND;
 		ICDInst.ICDSettings.JoulesToDeliver := DEFAULT_JOULES_TO_DELIVER;
 
-		for I in Integer range 1..2 loop
+		for I in Integer range 1..5 loop
 			ICDInst.RateHis(I).Rate := -1;
 			ICDInst.RateHis(I).Time := 0;
 		end loop;
 
-		for J in Integer range 1..5 loop
+		for J in Integer range 1..2 loop
 			ICDInst.BeforeHis(J).Rate := 0;
 			ICDInst.BeforeHis(J).Time := 0;
 		end loop;
@@ -99,21 +102,37 @@ package body ICD is
 	begin -- On
 		HRM.On(HRMInst, Hrt);
 		ImpulseGenerator.On(Gen);
+		Put("ICD is on"); New_Line;
 		ICDInst.IsModeOn := True;
 	end On;
 
 	function ReadRateHistory(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return Network.NetworkMessage is
 		Response : Network.NetworkMessage(ReadRateHistoryResponse);
 	begin -- ReadRateHistory
+		--Network.DebugPrintMessage(Msg); 
+		--Network.SendMessage(Net,
+        --               (MessageType => Network.ReadRateHistoryResponse,
+        --                HDestination => Msg.HSource,
+        --                History => ICDInst.RateHis));
+
+		--Response.MessageType := ReadRateHistoryResponse;
 		Response.HDestination := Msg.HSource;
 		Response.History := ICDInst.RateHis;
 		return Response;
 	end ReadRateHistory;
 
 
-	function ReadSettings(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return  Network.NetworkMessage is
+	function ReadSettings(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return Network.NetworkMessage is
 		Response : Network.NetworkMessage(ReadSettingsResponse);
 	begin -- name
+		--Network.DebugPrintMessage(Msg); 
+		--Network.SendMessage(Net,
+        --               (MessageType => ReadSettingsResponse,
+        --                RDestination => Msg.RSource,
+        --                RTachyBound => ICDInst.ICDSettings.TachBound,
+        --                RJoulesToDeliver => ICDInst.ICDSettings.JoulesToDeliver));
+
+		--Response.MessageType := ReadSettingsResponse;
 		Response.RDestination := Msg.RSource;
 		Response.RTachyBound := ICDInst.ICDSettings.TachBound;
 		Response.RJoulesToDeliver := ICDInst.ICDSettings.JoulesToDeliver;
@@ -123,32 +142,79 @@ package body ICD is
 	function ChangeSettings(Msg: in Network.NetworkMessage; ICDInst : in out ICDType) return Network.NetworkMessage is
 		Response : Network.NetworkMessage(ChangeSettingsResponse);
 	begin -- ChangeSettings
+		--Network.DebugPrintMessage(Msg); 
+		--Network.SendMessage(Net,
+        --               (MessageType => ChangeSettingsResponse,
+        --                CDestination => Msg.CSource,
+        --                ICDSettings.TachBound => Msg.CTachyBound,
+        --                ICDSettings.CJoulesToDeliver => Msg.CJoulesToDeliver));
+		
 		Response.CDestination := Msg.CSource;
 		ICDInst.ICDSettings.TachBound := Msg.CTachyBound;
-		ICDInst.ICDSettings.CJoulesToDeliver := Msg.CJoulesToDeliver;
+		ICDInst.ICDSettings.JoulesToDeliver := Msg.CJoulesToDeliver;
 		return Response;
 	end ChangeSettings;
 
-
-	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; Hrt: in out HeartType) is
+	procedure AddHistory(ICDInst : in out ICD.ICDType; CurrentRate : in Network.RateRecord) is
 		
+	begin -- Add
+		Put("");
+		ICDInst.BeforeHis(1) := ICDInst.BeforeHis(2);
+		ICDInst.BeforeHis(2) := ICDInst.RateHis(1);
+		for J in Integer range 1..4 loop
+			ICDInst.RateHis(J) := ICDInst.RateHis(J+1);
+		end loop;
+			
+			ICDInst.RateHis(5) := CurrentRate;
+			
+	end AddHistory;
+
+	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; Hrt: in out Heart.HeartType) is
+		CurrentRate : Network.RateRecord;
+		--Temp : Network.RateRecord;
 	begin -- Tick
-		if IsModeOn then
-			-- read heart rate from the hrm
-			ICDInst.CurrentTime := ICDInst.CurrentTime + 1; 
-		
-			HRM.GetRate(HRMInst, ICDInst.Rate);
 
+		--HRM.GetRate(HRMInst, CurrentRate.Rate);
+		--Put("Measured heart rate  = ");
+		--Put(Item => CurrentRate.Rate);
+		--New_Line;
+
+		-- HRM.GetRate(HRMInst, ICDInst.Rate);
+		--Put("Measured heart rate  = ");
+      	--Put(Item => ICDInst.Rate);
+      	--New_Line;
+		if ICDInst.IsModeOn then
+
+			-- read heart rate from the hrm
+			--ICDInst.CurrentTime := ICDInst.CurrentTime + 1; 
+		
+			--HRM.GetRate(HRMInst, ICDInst.Rate);
+
+			HRM.GetRate(HRMInst, CurrentRate.Rate);
+			Put("Measured heart rate  = ");
+			Put(Item => CurrentRate.Rate);
+			New_Line;
+			CurrentRate.Time := ICDInst.CurrentTime;
+			ICDInst.CurrentTime := ICDInst.CurrentTime+1;
+			-- debug
+			--Put("Measured heart rate  = ");
+      		--Put(Item => ICDInst.Rate);
+      		--New_Line;
 			-- Record the lastest heart rate
 
-			ICDInst.BeforeHis(1) := ICDInst.BeforeHis(2);
-			ICDInst.BeforeHis(2) := ICDInst.RateHis(1);
-			for J in Integer range 1..4 loop
-				ICDInst.RateHis(J) := ICDInst.RateHis(J+1);
-			end loop;
-		
-			ICDInst.RateHis(5).Rate := ICDInst.Rate;
-			ICDInst.RateHis(5).Time := ICDInst.CurrentTime +1;
+			AddHistory(ICDInst, CurrentRate);
+
+			--ICDInst.BeforeHis(1) := ICDInst.BeforeHis(2);
+			--ICDInst.BeforeHis(2) := ICDInst.RateHis(1);
+			--for J in Integer range 1..4 loop
+			--	ICDInst.RateHis(J) := ICDInst.RateHis(J+1);
+			--end loop;
+			--Temp.Rate := CurrentRate.Rate;
+			--ICDInst.RateHis(5) := CurrentRate;
+			--ICDInst.RateHis(5).Rate := Temp.Rate;
+
+
+			--ICDInst.RateHis(5).Time := ICDInst.CurrentTime +1;
 		
 
 			if InTtreatment = True then
@@ -170,7 +236,8 @@ package body ICD is
 					TickCounter := 0;
 				
 					if IsVenFibrillation(ICDInst) then
-						ImpulseGenerator.SetImpulse(Gen,30);
+						--ImpulseGenerator.SetImpulse(Gen,30);
+						null;
 					else
 						ImpulseGenerator.SetImpulse(Gen, 0);
 					end if;
@@ -178,13 +245,16 @@ package body ICD is
 				else
 
 					if IsVenFibrillation(ICDInst) then
-						ImpulseGenerator.SetImpulse(Gen,30);
+						null;
+						--ImpulseGenerator.SetImpulse(Gen,30);
 					else
 						ImpulseGenerator.SetImpulse(Gen, 0);
 					end if;	
 			
 				end if;
-			end if;		
+			end if;	
+		else
+			ICDInst.CurrentTime := ICDInst.CurrentTime+1;		
 		end if;
 		
 	end Tick;

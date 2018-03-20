@@ -4,25 +4,29 @@ with Measures; use Measures;
 with Heart;
 with HRM;
 with ImpulseGenerator;
-with Network;
-with ICD;
-with Principal;
+with Network; use Network;
+with ICD; 
+with Principal; use Principal;
 
-package ClosedLoop is
+package body ClosedLoop is
 
-		Hrt : Heart.HearType;
+		Hrt : Heart.HeartType;
 		HRMInst : HRM.HRMType; 
 		Gen : ImpulseGenerator.GeneratorType;
-		Net : Network.Network；
+		Net : Network.Network;
 		ICDInst: ICD.ICDType;
-	
+    MsgAvailable : Boolean:= False;
+    Msg : Network.NetworkMessage;
+	  KnownPrincipals : access Network.PrincipalArray := new Network.PrincipalArray(0..2); 
+    -- create three Principals 
+    Card : Principal.PrincipalPtr := new Principal.Principal;  -- A cardiologist
+    Clin : Principal.PrincipalPtr := new Principal.Principal;  -- A clinical assistant
+    Patient : Principal.PrincipalPtr := new Principal.Principal; -- A patient
+    --Response : Network.NetworkMessage;
+
 	procedure Init is
-		  -- create three Principals 
-   		Card : Principal.PrincipalPtr := new Principal.Principal;  -- A cardiologist
-   		Clin : Principal.PrincipalPtr := new Principal.Principal;  -- A clinical assistant
-  		Patient : Principal.PrincipalPtr := new Principal.Principal; -- A patient
-		
-		  KnownPrincipals : access Network.PrincipalArray := new Network.PrincipalArray(0..2);
+		  
+		  
 		
 	begin -- Init
 	   	
@@ -38,84 +42,133 @@ package ClosedLoop is
    		Principal.DebugPrintPrincipalPtr(Card); New_Line;
    		Principal.DebugPrintPrincipalPtr(Clin); New_Line;
    		Principal.DebugPrintPrincipalPtr(Patient); New_Line;	
-
+      
+      HRM.Init(HRMInst);
    		Heart.Init(Hrt);
-   		HRM.Init(HRMInst);
+   		--HRM.Init(HRMInst);
    		ImpulseGenerator.Init(Gen);
    		Network.Init(Net, KnownPrincipals);
-   		ICDInst.Init(ICDInst);
+   		ICD.Init(ICDInst);
 
-   		ICDInst.On(HRMInst, Generator, ICDInst, Hrt);
+   		ICD.On(HRMInst, Gen, ICDInst, Hrt);
 
 
 	end Init;
 
-	procedure Tick() is
-
-	    Response : Network.NetworkMessage;
+	procedure Tick is
+      Response : Network.NetworkMessage;
 	begin -- Tick
 
 	   	Network.GetNewMessage(Net,MsgAvailable,Msg);
-      	  
+      --Network.DebugPrintMessage(Msg);	  
           if MsgAvailable then
 
-        	    Network.DebugPrintMessage(Msg);
+        	    --Network.DebugPrintMessage(Msg);
         	    
               case Msg.MessageType is 
                   when ModeOn =>
-
-                      if Msg.MOnSource = Card or Mes.MOnSource = Clin then
-                          ICDInst.On(HRMInst, Gen, ICDInst, Hrt);
-                          Put("ICD system is on!")
+                      
+                      if ICDInst.IsModeOn then
+                          null;
                       else
-                          Put("No Authorised!");
+                          if Msg.MOnSource = Card or  Msg.MOnSource = Clin then
+                              ICD.On(HRMInst, Gen, ICDInst, Hrt);
+                              Network.DebugPrintMessage(Msg);
+                          
+                              
+                          end if;
                       end if;
+
+                      
 
                   when ModeOff =>
-                      if Msg.MOffSource = Card or Msg.MOffSource = Clin then
-                          ICDInst.Off(HRMInst,Gen,ICDInst);
-                          Put("ICD system is shutted down!")
+                      
+                      if ICDInst.IsModeOn then
+                          if Msg.MOffSource = Card or Msg.MOffSource = Clin then
+                              ICD.Off(HRMInst,Gen,ICDInst);
+                              Network.DebugPrintMessage(Msg);
+                          
+                          end if;
                       else
-                          Put("No Authorised!")
+                          null;
                       end if;
+
+
+                      
+
                   when ReadRateHistoryRequest =>
+                      
+
+                      --Network.DebugPrintMessage(Response); New_Line;
+                      
                       if ICDInst.IsModeOn then
                           if Msg.HSource = Card or Msg.HSource = Clin then
-                              Response := ICDInst.ReadRateHistory(Msg, ICDInst);
-                              Net.DebugPrintMessage(Response);
-                              Net.SendMessage(Net, Response);
+                              --ICDInst.ReadRateHistory(Msg, ICDInst,Net);
+                              Network.DebugPrintMessage(Msg); 
+                              Response := ICD.ReadRateHistory(Msg, ICDInst);
+
+                              --Network.DebugPrintMessage(Response); New_Line;
+                              --Put("ahaa");
+                              Network.SendMessage(Net, Response);
+                              --Put("ahaa");
+
 
                           end if;
                       else
-                          Put("Can not read history when ICD is ModeOff");
+                          null;
                       end if;
+                      
                   when ReadSettingsRequest =>
+
+                      --Network.DebugPrintMessage(Msg);New_Line;
+
                       if ICDInst.IsModeOn then
-                          Response := ICDInst.ReadSettings(Msg,ICDInst);
-                          Net.DebugPrintMessage(Response);
-                          Net.SendMessage(Net, Response);
+                          --ReadSettings(Msg,ICDInst,Net);
+                          Network.DebugPrintMessage(Msg);New_Line;
+                          Put("Reading Settins");
+                          Response := ICD.ReadSettings(Msg,ICDInst);
+                          --Network.DebugPrintMessage(Response);New_Line;
+                          Network.SendMessage(Net, Response);
+
                       end if;
+
+
                   when ChangeSettingsRequest => 
+                      --Put("11111111");
+                      --Network.DebugPrintMessage(Msg);New_Line;
+
                       if ICDInst.IsModeOn then
-                          Put("Settings can not be changed when ICD is ModeOn");
+                          null;
                       else
                           if Msg.CSource = Card or Msg.CSource = Clin then
-                              Response := ICDInst.ChangeSettings(Msg, ICDInst);
-                              Net.DebugPrintMessage(Response);
-                              Net.SendMessage(Net, Response);
+                              --ChangeSettings(Msg,ICDInst,Net);
+                              Network.DebugPrintMessage(Msg);New_Line;
+                              Response := ICD.ChangeSettings(Msg, ICDInst);
+                              --Network.DebugPrintMessage(Response);New_Line;
+                              Network.SendMessage(Net, Response);
                           end if;
-                      end if;       
-              end case;
+                      end if;
 
+                  when others =>
+                      Put("Null"); New_Line;
+              end case;
+              delay 0.1;
 
       	  end if;
+          
+          if ICDInst.IsModeOn then
+              HRM.Tick(HRMInst, Hrt);
+              ImpulseGenerator.Tick(Gen, Hrt);
+          end if;
+          
 
           Heart.Tick(Hrt);
-          HRM.Tick(HRMInst, Hrt);
-          ICD.Tick(ICDInst, HRMInst, Gen, Hrt);
-          ImpulseGenerator.Tick(Gen, Hrt);
           Network.Tick(Net);
-
+          
+          ICD.Tick(ICDInst, HRMInst, Gen, Hrt);
+          
+          --Network.Tick(Net);
+          
 				
 	end Tick;
 

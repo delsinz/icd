@@ -146,9 +146,40 @@ package body Network is
               Put(", ");
            end loop;
            Put(")"); New_Line;
-         when others =>
+
+
+          when ReadSettingsRequest =>
+          Put("ReadSettingsRequest (RSource: ");
+          Principal.DebugPrintPrincipalPtr(Message.RSource);
+          Put(")"); New_Line;
+
+          when ReadSettingsResponse =>
+          Put("ReadSettingsResponse (RDestination: ");
+          Principal.DebugPrintPrincipalPtr(Message.RDestination);
+          Put("The Setting is: TachyBound: ");
+          Ada.Integer_Text_IO.Put(Integer(Message.RTachyBound));
+          Put(" JoulesToDeliver: ");
+          Ada.Integer_Text_IO.Put(Integer(Message.RJoulesToDeliver));
+          Put(")"); New_Line;
+
+          when ChangeSettingsRequest =>
+          Put("ChangeSettingsRequest (CSource: ");
+          Principal.DebugPrintPrincipalPtr(Message.CSource);
+          Put("The CHANGE Setting is: TachyBound: ");
+          Ada.Integer_Text_IO.Put(Integer(Message.CTachyBound));
+          Put(" JoulesToDeliver: ");
+          Ada.Integer_Text_IO.Put(Integer(Message.CJoulesToDeliver));
+          Put(")"); New_Line;
+
+          when ChangeSettingsResponse =>
+          Put("ChangeSettingsResponse (CSource: ");
+          Principal.DebugPrintPrincipalPtr(Message.CDestination);
+          Put(")"); New_Line;
+           
+          
+          when others =>
             -- you should implement these for your own debugging if you wish
-            null;
+             null;
       end case;
    end DebugPrintMessage;
 

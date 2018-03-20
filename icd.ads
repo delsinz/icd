@@ -2,6 +2,7 @@ with HRM;
 with Measures;
 with ImpulseGenerator;
 with Network;
+with Heart;
 package ICD is
 	
 	--Type RateHistory is array(1..6) of Integer;
@@ -54,11 +55,13 @@ package ICD is
 
 	function ReadRateHistory(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return Network.NetworkMessage;
 
-	function ReadSettings(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return  Network.NetworkMessage;
+	function ReadSettings(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return Network.NetworkMessage;
 
 	function ChangeSettings(Msg: in Network.NetworkMessage; ICDInst : in out ICDType) return Network.NetworkMessage;
 
-	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType );
+	procedure AddHistory(ICDInst : in out ICD.ICDType; CurrentRate : in Network.RateRecord);
+
+	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; Hrt: in out Heart.HeartType);
 
 
 end ICD;
