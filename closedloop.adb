@@ -156,11 +156,10 @@ package body ClosedLoop is
 
       	  end if;
           
-          if ICDInst.IsModeOn then
-              HRM.Tick(HRMInst, Hrt);
-              ImpulseGenerator.Tick(Gen, Hrt);
-          end if;
           
+          HRM.Tick(HRMInst, Hrt);
+          ImpulseGenerator.Tick(Gen, Hrt);
+                    
 
           Heart.Tick(Hrt);
           Network.Tick(Net);
@@ -168,8 +167,10 @@ package body ClosedLoop is
           ICD.Tick(ICDInst, HRMInst, Gen, Hrt);
           
           --Network.Tick(Net);
-          
-				
+          Put("Measured heart rate  = ");
+          Put(Item => HRMInst.Rate);
+          New_Line;
+				  
 	end Tick;
 
 

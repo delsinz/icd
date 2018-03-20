@@ -14,10 +14,10 @@ package ICD is
 	BEFORE_HISTORY_LENGTH : constant Integer := 2;
 	--FULL_HISTORY_LENGTH: constant Integer : = 7;
 
-	InTtreatment : Boolean := False;
-	TreatCount : Integer := 0;
-	TickCounter : Integer := 0;
-	ImpulseFreq : Integer := 0;
+	--InTtreatment : Boolean := False;
+	--TreatCount : Integer := 0;
+	--TickCounter : Integer := 0;
+	--ImpulseFreq : Integer := 0;
 	--RateHis : array(1..7) of Integer;
 
 	--Type RateHistoryType is array(1..7) of Integer;
@@ -34,18 +34,22 @@ package ICD is
 	Type ICDType is
 		record
 		
-		Rate : Measures.BPM;
+		--Rate : Measures.BPM;
 		Impulse : Measures.Joules;
 		RateHis: Network.RateHistory;
 		BeforeHis: BeforeHistoryType;
 		CurrentTime: Measures.TickCount;
 		IsModeOn : Boolean;	
 		ICDSettings : Settings;
+		InTtreatment :Boolean;
+		TreatCount : Integer;
+		TickCounter : Integer;
+		ImpulseFreq : Integer;
 		end record;
 
 	procedure Init(ICDInst: out ICDType);
 
-	function IsTachycardia(Rate: in Measures.BPM; ICDInst: in ICDType) return Boolean;
+	function IsTachycardia(CurrentRate : in Network.RateRecord; ICDInst: in out ICDType) return Boolean;
 
     function IsVenFibrillation(ICDInst : in out ICDType) return Boolean; 
 

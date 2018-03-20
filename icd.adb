@@ -25,9 +25,14 @@ package body ICD is
 		end loop;
 
 		for J in Integer range 1..2 loop
-			ICDInst.BeforeHis(J).Rate := 0;
+			ICDInst.BeforeHis(J).Rate := -1;
 			ICDInst.BeforeHis(J).Time := 0;
 		end loop;
+		ICDInst.InTtreatment := False;
+		ICDInst.TreatCount := 0;
+		ICDInst.TickCounter := 0;
+		ICDInst.ImpulseFreq :=-1;
+
 
 		--ICDInst.RateHistory := (Measures.BPM'First,Measures.BPM'First,Measures.BPM'First,Measures.BPM'First,Measures.BPM'First,Measures.BPM'First,Measures.BPM'First);
         --ICDInst.ModeStatus : Boolean := False;
@@ -36,9 +41,11 @@ package body ICD is
 
 
 	-- function used to detect tachycardia
-	function IsTachycardia(Rate: in Measures.BPM; ICDInst: in ICDType) return Boolean is		
+	function IsTachycardia(CurrentRate : in Network.RateRecord; ICDInst: in out ICDType) return Boolean is		
 	begin -- DetectTach
-		if Rate > ICDInst.ICDSettings.TachBound then
+		if CurrentRate.Rate > ICDInst.ICDSettings.TachBound then
+			Put("Tachycardia Detected!!!");New_Line;
+			ICDInst.ImpulseFreq := DSECOND_PER_MIN/(CurrentRate.Rate+OBOVE_RATE);
 			return True;
 		end if;
 		return False;
@@ -52,11 +59,14 @@ package body ICD is
 		FullHis: FullHistory := (0,0,0,0,0,0,0);
 
 	begin -- IsVenFibrillation
+
 		
 
 		if ICDInst.BeforeHis(1).Rate = Measures.BPM'First then
 			return False;
 		end if;
+
+
 
 		for I in Integer range 1..2 loop
 			FullHis(I) := ICDInst.BeforeHis(I).Rate;
@@ -76,6 +86,7 @@ package body ICD is
 			AveChange := TempValue/6;
 
 		if AveChange >= 10 then
+
 			return True;
 		else
 			return False;
@@ -158,7 +169,7 @@ package body ICD is
 	procedure AddHistory(ICDInst : in out ICD.ICDType; CurrentRate : in Network.RateRecord) is
 		
 	begin -- Add
-		Put("");
+		
 		ICDInst.BeforeHis(1) := ICDInst.BeforeHis(2);
 		ICDInst.BeforeHis(2) := ICDInst.RateHis(1);
 		for J in Integer range 1..4 loop
@@ -190,12 +201,13 @@ package body ICD is
 		
 			--HRM.GetRate(HRMInst, ICDInst.Rate);
 
-			HRM.GetRate(HRMInst, CurrentRate.Rate);
-			Put("Measured heart rate  = ");
-			Put(Item => CurrentRate.Rate);
-			New_Line;
-			CurrentRate.Time := ICDInst.CurrentTime;
-			ICDInst.CurrentTime := ICDInst.CurrentTime+1;
+			--HRM.GetRate(HRMInst, CurrentRate.Rate);
+			--Put("Measured heart rate  = ");
+			--Put(Item => HRMInst.Rate);
+			--New_Line;
+
+			CurrentRate.Rate := HRMInst.Rate;
+			CurrentRate.Time := ICDInst.CurrentTime +1;
 			-- debug
 			--Put("Measured heart rate  = ");
       		--Put(Item => ICDInst.Rate);
@@ -217,26 +229,37 @@ package body ICD is
 			--ICDInst.RateHis(5).Time := ICDInst.CurrentTime +1;
 		
 
-			if InTtreatment = True then
-				ImpulseFreq := DSECOND_PER_MIN/(ICDInst.Rate+OBOVE_RATE);
-				if TickCounter = ImpulseFreq then
-					TickCounter := 0;
-					TreatCount := TreatCount -1;
+			if ICDInst.InTtreatment = True then
+
+				--ImpulseFreq := DSECOND_PER_MIN/(CurrentRate.Rate+OBOVE_RATE);
+				Put(ICDInst.ImpulseFreq); New_Line;
+
+				if ICDInst.TickCounter = ICDInst.ImpulseFreq then
+					ICDInst.TickCounter  := 0;
+					ICDInst.TreatCount := ICDInst.TreatCount -1;
+					--Put(TreatCount);New_Line;
 					ImpulseGenerator.SetImpulse(Gen,2);
-					if TreatCount = 0 then
-						InTtreatment := False;
+					Put("Give 2 Joules"); New_Line;
+					if ICDInst.TreatCount = 0 then
+						ICDInst.InTtreatment := False;
+						ICDInst.ImpulseFreq := -1;
+						ICDInst.TickCounter := 0;
 					end if;
 				else 
-					TickCounter := TickCounter + 1; 		
+					ICDInst.TickCounter := ICDInst.TickCounter + 1; 
+					ImpulseGenerator.SetImpulse(Gen,0);		
 				end if;
 			else 
-				if IsTachycardia(ICDInst.Rate, ICDInst) then
-					InTtreatment := True;
-					TreatCount := 9;
-					TickCounter := 0;
-				
+				if IsTachycardia(CurrentRate, ICDInst) then
+					
+					ICDInst.InTtreatment := True;
+					ICDInst.TreatCount := 10;
+					ICDInst.TickCounter := 0;
+					
+
 					if IsVenFibrillation(ICDInst) then
-						--ImpulseGenerator.SetImpulse(Gen,30);
+						
+						--ImpulseGenerator.SetImpulse(Gen,30);						
 						null;
 					else
 						ImpulseGenerator.SetImpulse(Gen, 0);
@@ -253,9 +276,9 @@ package body ICD is
 			
 				end if;
 			end if;	
-		else
-			ICDInst.CurrentTime := ICDInst.CurrentTime+1;		
+	
+					
 		end if;
-		
+		ICDInst.CurrentTime := ICDInst.CurrentTime+1;
 	end Tick;
 end ICD;
