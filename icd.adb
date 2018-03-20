@@ -28,6 +28,7 @@ package body ICD is
 			ICDInst.BeforeHis(J).Rate := -1;
 			ICDInst.BeforeHis(J).Time := 0;
 		end loop;
+
 		ICDInst.InTtreatment := False;
 		ICDInst.TreatCount := 0;
 		ICDInst.TickCounter := 0;
@@ -105,14 +106,30 @@ package body ICD is
 	begin -- Off
 		
 		HRM.Off(HRMInst);
+		ImpulseGenerator.SetImpulse(Gen,0);
 		ImpulseGenerator.Off(Gen);
 		ICDInst.IsModeOn := False;
+		ICDInst.InTtreatment := False;
+
+		-- clear all history record
+		for I in Integer range 1..5 loop
+			ICDInst.RateHis(I).Rate := -1;
+			ICDInst.RateHis(I).Time := 0;
+		end loop;
+
+		for J in Integer range 1..2 loop
+			ICDInst.BeforeHis(J).Rate := -1;
+			ICDInst.BeforeHis(J).Time := 0;
+		end loop;
+
 	end Off;
 
-	procedure On(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType; Hrt: in Heart.HeartType) is
+	--procedure On(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType; Hrt: in Heart.HeartType) is
+	procedure On(ICDInst: in out ICDType) is
 	begin -- On
-		HRM.On(HRMInst, Hrt);
-		ImpulseGenerator.On(Gen);
+		-- HRM.On(HRMInst, Hrt);
+		-- Put(Hrt.Rate);
+		-- ImpulseGenerator.On(Gen);
 		Put("ICD is on"); New_Line;
 		ICDInst.IsModeOn := True;
 	end On;
@@ -180,11 +197,10 @@ package body ICD is
 			
 	end AddHistory;
 
-	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; Hrt: in out Heart.HeartType) is
+	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType) is
 		CurrentRate : Network.RateRecord;
 		--Temp : Network.RateRecord;
 	begin -- Tick
-
 		--HRM.GetRate(HRMInst, CurrentRate.Rate);
 		--Put("Measured heart rate  = ");
 		--Put(Item => CurrentRate.Rate);
@@ -229,22 +245,31 @@ package body ICD is
 			--ICDInst.RateHis(5).Time := ICDInst.CurrentTime +1;
 		
 
-			if ICDInst.InTtreatment = True then
+			if ICDInst.InTtreatment then
 
 				--ImpulseFreq := DSECOND_PER_MIN/(CurrentRate.Rate+OBOVE_RATE);
 				Put(ICDInst.ImpulseFreq); New_Line;
 
 				if ICDInst.TickCounter = ICDInst.ImpulseFreq then
+				 if ICDInst.IsModeOn then
 					ICDInst.TickCounter  := 0;
 					ICDInst.TreatCount := ICDInst.TreatCount -1;
 					--Put(TreatCount);New_Line;
 					ImpulseGenerator.SetImpulse(Gen,2);
+
 					Put("Give 2 Joules"); New_Line;
 					if ICDInst.TreatCount = 0 then
 						ICDInst.InTtreatment := False;
 						ICDInst.ImpulseFreq := -1;
 						ICDInst.TickCounter := 0;
+						ImpulseGenerator.SetImpulse(Gen,0);
 					end if;
+				 else
+				  ImpulseGenerator.SetImpulse(Gen,0);
+				  ICDInst.TickCounter := 0;
+				  ICDInst.InTtreatment := False;
+				  ICDInst.TreatCount := 0;
+				  end if;
 				else 
 					ICDInst.TickCounter := ICDInst.TickCounter + 1; 
 					ImpulseGenerator.SetImpulse(Gen,0);		
@@ -256,9 +281,11 @@ package body ICD is
 					ICDInst.TreatCount := 10;
 					ICDInst.TickCounter := 0;
 					
+						
 
 					if IsVenFibrillation(ICDInst) then
 						
+						ImpulseGenerator.SetImpulse(Gen, 0);
 						--ImpulseGenerator.SetImpulse(Gen,30);						
 						null;
 					else
@@ -268,6 +295,7 @@ package body ICD is
 				else
 
 					if IsVenFibrillation(ICDInst) then
+						ImpulseGenerator.SetImpulse(Gen, 0);
 						null;
 						--ImpulseGenerator.SetImpulse(Gen,30);
 					else

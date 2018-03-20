@@ -8,7 +8,7 @@ procedure test is
 begin -- test
 	closedloop.Init;
 
-	for I in Integer range 1..1000 loop
+	for I in Integer range 1..600 loop
 		closedloop.Tick;
 	end loop; 
 end test;

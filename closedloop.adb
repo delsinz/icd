@@ -43,17 +43,14 @@ package body ClosedLoop is
    		Principal.DebugPrintPrincipalPtr(Clin); New_Line;
    		Principal.DebugPrintPrincipalPtr(Patient); New_Line;	
       
+      Heart.Init(Hrt);
       HRM.Init(HRMInst);
-   		Heart.Init(Hrt);
-   		--HRM.Init(HRMInst);
    		ImpulseGenerator.Init(Gen);
    		Network.Init(Net, KnownPrincipals);
    		ICD.Init(ICDInst);
 
-   		ICD.On(HRMInst, Gen, ICDInst, Hrt);
-
-
 	end Init;
+
 
 	procedure Tick is
       Response : Network.NetworkMessage;
@@ -72,7 +69,10 @@ package body ClosedLoop is
                           null;
                       else
                           if Msg.MOnSource = Card or  Msg.MOnSource = Clin then
-                              ICD.On(HRMInst, Gen, ICDInst, Hrt);
+                              --ICD.On(HRMInst, Gen, ICDInst, Hrt);
+                              ICD.On(ICDInst);
+                              HRM.On(HRMInst,Hrt);
+                              ImpulseGenerator.On(Gen);
                               Network.DebugPrintMessage(Msg);
                           
                               
@@ -152,25 +152,28 @@ package body ClosedLoop is
                   when others =>
                       Put("Null"); New_Line;
               end case;
-              delay 0.1;
+              
 
       	  end if;
-          
-          
-          HRM.Tick(HRMInst, Hrt);
-          ImpulseGenerator.Tick(Gen, Hrt);
-                    
-
           Heart.Tick(Hrt);
+          HRM.Tick(HRMInst, Hrt);
           Network.Tick(Net);
-          
-          ICD.Tick(ICDInst, HRMInst, Gen, Hrt);
-          
-          --Network.Tick(Net);
+          ICD.Tick(ICDInst, HRMInst, Gen);
+
+          if ICDInst.IsModeOn then
+          ImpulseGenerator.Tick(Gen, Hrt);
+          end if;
+          Put("heart rate  = ");
+          Put(Item => hrt.Rate);
+          Put("      ");
           Put("Measured heart rate  = ");
           Put(Item => HRMInst.Rate);
+          
+          
           New_Line;
-				  
+          --Network.Tick(Net);
+          
+				  --delay 0.1;
 	end Tick;
 
 

@@ -55,7 +55,8 @@ package ICD is
 
     procedure Off(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType);
 
-    procedure On(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType; Hrt: in Heart.HeartType);
+    procedure On(ICDInst: in out ICDType);
+    --procedure On(HRMInst: in out HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; ICDInst: in out ICDType; Hrt: in Heart.HeartType);
 
 	function ReadRateHistory(Msg: in Network.NetworkMessage; ICDInst : in ICDType) return Network.NetworkMessage;
 
@@ -65,7 +66,7 @@ package ICD is
 
 	procedure AddHistory(ICDInst : in out ICD.ICDType; CurrentRate : in Network.RateRecord);
 
-	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType; Hrt: in out Heart.HeartType);
+	procedure Tick(ICDInst : in out ICD.ICDType; HRMInst: in HRM.HRMType; Gen: in out ImpulseGenerator.GeneratorType);
 
 
 end ICD;
