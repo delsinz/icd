@@ -8,24 +8,24 @@ with Ada.Integer_Text_IO; use Ada.Integer_Text_IO;
 
 package body ICD is
 	
-	-- Create and initialise a new ICD software 
+	-- Create and initialise a new ICD software. 
 	procedure Init(ICDInst: out ICDType) is		
 	begin -- Init 	
-		-- Initialise the time 
+		-- Initialise the time. 
 		ICDInst.CurrentTime := 0;
-		-- The initail state of ICD is off 
+		-- The initail state of ICD is off. 
 		ICDInst.IsModeOn := False;
-		-- Initialise the ICD settings;
+		-- Initialise the ICD settings.
 		ICDInst.ICDSettings.TachBound := DEFAULT_TACH_BOUND;
 		ICDInst.ICDSettings.JoulesToDeliver := DEFAULT_JOULES_TO_DELIVER;
 
-		-- Initialise the array,which is used to stored rate history
+		-- Initialise the array,which is used to stored rate history.
 		for I in Integer range 1..5 loop
 			ICDInst.RateHis(I).Rate := -1;
 			ICDInst.RateHis(I).Time := 0;
 		end loop;
 
-		-- Initail the array,which store two records before rate history
+		-- Initail the array, which store two records before rate history
 		-- array, this two arrays are used to determine if VenFibrillation
 		-- happens. 
 		for J in Integer range 1..2 loop
@@ -33,26 +33,25 @@ package body ICD is
 			ICDInst.BeforeHis(J).Time := 0;
 		end loop;
 
-		-- Determine if heart is in treatment state
+		-- Determine if heart is in treatment state.
 		ICDInst.InTtreatment := False;
 		-- Initailise the number needs to count 
 		ICDInst.TreatCount := TREATMENT_TIMES;
-		-- Initailise the counter used to determine if need to send impulse
-		-- if TickCounter equal to the frequency of sending joules then 
-		-- send impulse. 
+		-- Initailise the counter used to determine if it is need to send 
+		-- impulse. If TickCounter equal to the frequency of sending joules 
+		-- then time to send the impulse. 
 		ICDInst.TickCounter := 0;
 		ICDInst.ImpulseFreq := -1;
 	end Init;
-
 
 	-- Function used to detect tachycardia.
 	function IsTachycardia(CurrentRate : in Network.RateRecord; 
 				ICDInst: in out ICDType) return Boolean is		
 	begin 
 		if CurrentRate.Rate > ICDInst.ICDSettings.TachBound then
-			-- Use to debug
+			-- Use to debug.
 			Put("Tachycardia Detected!!!");New_Line;
-			-- Calculate the frequency of sending impulse
+			-- Calculate the frequency of sending impulse.
 			ICDInst.ImpulseFreq := 
 				DSECOND_PER_MIN/(CurrentRate.Rate+OBOVE_RATE);
 			return True;
@@ -60,7 +59,7 @@ package body ICD is
 		return False;
 	end IsTachycardia;
 
-	-- Function used to detect Ventricle Fibrillation
+	-- Function used to detect Ventricle Fibrillation.
 	function IsVenFibrillation(ICDInst : in  ICDType) return Boolean is	
 		type FullHistory is array (Integer range 1..7) of Integer; 
 		AveChange : Integer := 0;
@@ -71,9 +70,9 @@ package body ICD is
 
 	begin -- IsVenFibrillation
 
-		-- Check if the first element in the before history array. If it is
-		-- equal to -1, which means there is no 7 stored rate record and can 
-		-- not determine if there is Ventricle Fibrillation.
+		-- Check the first element in the BeforeHis array. If it is
+		-- equal to -1, which means there is no 7 stored rate record 
+		-- and can not determine if there is Ventricle Fibrillation.
 		if ICDInst.BeforeHis(1).Rate = Measures.BPM'First then
 			return False;
 		end if;
@@ -89,7 +88,8 @@ package body ICD is
 
 		end loop;
 
-		-- Calculte average of 6 differences by using FullHis array. 
+		-- Calculte average of 6 differences by using rates in FullHis 
+		-- array. 
 		for I in Integer range 1..6 loop
 
 			TempValue := abs(FullHis(I+1) - FullHis(I)) + TempValue;
@@ -104,20 +104,22 @@ package body ICD is
 		end if;
 	end IsVenFibrillation;
 
-	-- Function to trun off ICD 
+		-- Function to trun off ICD. 
 	procedure Off(HRMInst: in out HRM.HRMType; 
 		Gen: in out ImpulseGenerator.GeneratorType; 
 		ICDInst: in out ICDType) is
 		
 	begin -- Off
-		-- Turn off hrm, impluse generator  
+		-- Turn off hrm, impluse generator. 
 		HRM.Off(HRMInst);
 		ImpulseGenerator.SetImpulse(Gen,0);
 		ImpulseGenerator.Off(Gen);
 		ICDInst.IsModeOn := False;
 		ICDInst.InTtreatment := False;
 
-		-- Clear all history record
+		-- Clear all history record, or when the ICD trun on again.
+		-- The stsytem will determine the initial state be Ventricle 
+		-- Fibrillation. 
 		for I in Integer range 1..5 loop
 			ICDInst.RateHis(I).Rate := -1;
 			ICDInst.RateHis(I).Time := 0;
@@ -178,8 +180,8 @@ package body ICD is
 		
 	begin 
 		-- Throw away the first element in BeforeHis array
-		-- move the rest elements forward, and add current 
-		-- record to the last postion. 
+		-- move the rest elements of BeforeHis and RateHis forward, then 
+		-- add current record to the last postion of RateHis array. 
 		ICDInst.BeforeHis(1) := ICDInst.BeforeHis(2);
 		ICDInst.BeforeHis(2) := ICDInst.RateHis(1);
 		for J in Integer range 1..4 loop
@@ -196,32 +198,32 @@ package body ICD is
 		CurrentRate : Network.RateRecord;
 	begin -- Tick
 
-		-- Determine if the ICD is on 
+		-- Determine if the ICD is on.
 		if ICDInst.IsModeOn then
-			-- Record the current rate and time 
+			-- Record the current rate and time. 
 			CurrentRate.Rate := HRMInst.Rate;
 			CurrentRate.Time := ICDInst.CurrentTime +1;
 
-			-- Add current rate to history rate array 
+			-- Add current rate to history rate array.
 			AddHistory(ICDInst, CurrentRate);
 			
-			-- Determine if the ICD is in treatment state 
+			-- Determine if the ICD is in treatment state. 
 			if ICDInst.InTtreatment then
-				-- Used to debug 
+				-- Used to debug. 
 				Put(ICDInst.ImpulseFreq); New_Line;
-				-- Check if need to send impulse
+				-- Check if it is need to send impulse.
 				if ICDInst.TickCounter = ICDInst.ImpulseFreq then
 						-- Time to send impulse, initilise the 
 						-- initialse tick couter, the treatment time
 						-- needs to substract one 
 						ICDInst.TickCounter  := 0;
 						ICDInst.TreatCount := ICDInst.TreatCount -1;
-						-- send two joules
+						-- send two joules.
 						ImpulseGenerator.SetImpulse(Gen,
 							TACHY_JOULES_TO_DELIVER);
-						-- Used to debug 
+						-- Used to debug. 
 						Put("Give 2 Joules"); New_Line;
-						-- determine the remaining treat could is 0 
+						-- Determine if the remaining treat times is 0 
 						if ICDInst.TreatCount = 0 then																								
 							ICDInst.InTtreatment := False;
 							ICDInst.ImpulseFreq := -1;
@@ -230,12 +232,13 @@ package body ICD is
 						end if;
 				
 				else 
-					-- Don't need to send impulse 
+					-- Don't need to send impulse when tick couter not equal
+					-- to the frequency of sending impulse.
 					ICDInst.TickCounter := ICDInst.TickCounter + 1; 
 					ImpulseGenerator.SetImpulse(Gen,NO_JOULES);		
 				end if;
 			else 
-				-- If Tachycardia happens 
+				-- If Tachycardia happens.  
 				if IsTachycardia(CurrentRate, ICDInst) then
 					
 					-- Set the treatment state be true, initialise

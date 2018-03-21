@@ -27,12 +27,12 @@ package body ClosedLoop is
     -- A patient
     Patient : Principal.PrincipalPtr := new Principal.Principal;
 
--- initialise the whole system
+-- Initialise the whole system.
   procedure Init is
         
   begin -- Init
       
-      -- set up the principals with the correct roles
+      -- Set up the principals with the correct roles
       Principal.InitPrincipalForRole(Card.all,Principal.Cardiologist);
       Principal.InitPrincipalForRole(Clin.all,Principal.ClinicalAssistant);
       Principal.InitPrincipalForRole(Patient.all,Principal.Patient);
@@ -63,7 +63,7 @@ package body ClosedLoop is
       -- Get a new message from network.
       Network.GetNewMessage(Net,MsgAvailable,Msg);
           
-          -- Check if the message is available 
+          -- Check if the message is available. 
           if MsgAvailable then             
               case Msg.MessageType is 
                   -- Process the message with mode on type. 
@@ -91,6 +91,7 @@ package body ClosedLoop is
                           Heart.SetImpulse(Hrt,0);
                           Network.DebugPrintMessage(Msg);
                       end if;
+                      
                   -- Process the message with ReadRateHistoryRequest type.
                   when ReadRateHistoryRequest =>
                       -- All roles could read history when the ICD is on.
