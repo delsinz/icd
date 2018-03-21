@@ -210,7 +210,7 @@ package body ICD is
 			-- Determine if the ICD is in treatment state. 
 			if ICDInst.InTtreatment then
 				-- Used to debug. 
-				Put(ICDInst.ImpulseFreq); New_Line;
+				-- Put(ICDInst.ImpulseFreq); New_Line;
 				-- Check if it is need to send impulse.
 				if ICDInst.TickCounter = ICDInst.ImpulseFreq then
 						-- Time to send impulse, initilise the 
