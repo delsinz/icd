@@ -9,7 +9,7 @@ with ICD;
 with Principal; use Principal;
 
 package body ClosedLoop is
-
+    
     Hrt : Heart.HeartType;
     HRMInst : HRM.HRMType; 
     Gen : ImpulseGenerator.GeneratorType;
@@ -17,17 +17,19 @@ package body ClosedLoop is
     ICDInst: ICD.ICDType;
     MsgAvailable : Boolean:= False;
     Msg : Network.NetworkMessage;
-    KnownPrincipals : access Network.PrincipalArray := new Network.PrincipalArray(0..2); 
-    -- create three Principals 
-    Card : Principal.PrincipalPtr := new Principal.Principal;  -- A cardiologist
-    Clin : Principal.PrincipalPtr := new Principal.Principal;  -- A clinical assistant
-    Patient : Principal.PrincipalPtr := new Principal.Principal; -- A patient
-    --Response : Network.NetworkMessage;
-
-  procedure Init is
-      
-      
+    KnownPrincipals : access Network.PrincipalArray 
+                := new Network.PrincipalArray(0..2); 
     
+    -- A cardiologist
+    Card : Principal.PrincipalPtr := new Principal.Principal;
+    -- A clinical assistant  
+    Clin : Principal.PrincipalPtr := new Principal.Principal;
+    -- A patient
+    Patient : Principal.PrincipalPtr := new Principal.Principal;
+
+-- initialise the whole system
+  procedure Init is
+        
   begin -- Init
       
       -- set up the principals with the correct roles
@@ -43,6 +45,8 @@ package body ClosedLoop is
       Principal.DebugPrintPrincipalPtr(Clin); New_Line;
       Principal.DebugPrintPrincipalPtr(Patient); New_Line;  
       
+      -- Initialse heart, heart moniter, impulse generator,
+      -- newwork and ICD. 
       Heart.Init(Hrt);
       HRM.Init(HRMInst);
       ImpulseGenerator.Init(Gen);
@@ -51,100 +55,78 @@ package body ClosedLoop is
 
   end Init;
 
-
+  -- Tick the clock, the whole system start to work. 
   procedure Tick is
       Response : Network.NetworkMessage;
   begin -- Tick
 
+      -- Get a new message from network.
       Network.GetNewMessage(Net,MsgAvailable,Msg);
-      --Network.DebugPrintMessage(Msg);   
-          if MsgAvailable then
-
-              --Network.DebugPrintMessage(Msg);
-              
+          
+          -- Check if the message is available 
+          if MsgAvailable then             
               case Msg.MessageType is 
+                  -- Process the message with mode on type. 
                   when ModeOn =>
-                      
-                      if ICDInst.IsModeOn then
-                          null;
-                      else
-                          if Msg.MOnSource = Card or  Msg.MOnSource = Clin then
-                              --ICD.On(HRMInst, Gen, ICDInst, Hrt);
-                              ICD.On(ICDInst);
-                              HRM.On(HRMInst,Hrt);
-                              ImpulseGenerator.On(Gen);
-                              Network.DebugPrintMessage(Msg);
-                          
-                              
-                          end if;
+                      -- If the ICD software is off, only card and clin could
+                      -- turn it on. 
+                      if(not ICDInst.IsModeOn) and (Msg.MOnSource = Card 
+                          or  Msg.MOnSource = Clin) then 
+                          -- Turn on all components.
+                          ICD.On(ICDInst);
+                          HRM.On(HRMInst,Hrt);
+                          ImpulseGenerator.On(Gen);
+                          Network.DebugPrintMessage(Msg);
                       end if;
 
-                      
-
+                  -- Process the message with mode off type. 
                   when ModeOff =>
-                      
-                      if ICDInst.IsModeOn then
-                          if Msg.MOffSource = Card or Msg.MOffSource = Clin then
-                              ICD.Off(HRMInst,Gen,ICDInst);
-                              Heart.SetImpulse(Hrt,0);
-                              Network.DebugPrintMessage(Msg);
-                              
-                          end if;
-                      else
-                          null;
+                      -- If the ICD software is on, only card and clin could
+                      -- turn it off.  
+                      if ICDInst.IsModeOn and (Msg.MOffSource = Card or 
+                          Msg.MOffSource = Clin)then
+                          -- Trun off all components.
+                          ICD.Off(HRMInst,Gen,ICDInst);
+                          -- Set the impulse to be 0.
+                          Heart.SetImpulse(Hrt,0);
+                          Network.DebugPrintMessage(Msg);
                       end if;
-
+                  -- Process the message with ReadRateHistoryRequest type.
                   when ReadRateHistoryRequest =>
-                      
-
-                      --Network.DebugPrintMessage(Response); New_Line;
-                      
+                      -- All roles could read history when the ICD is on.
                       if ICDInst.IsModeOn then
-                          if Msg.HSource = Card or Msg.HSource = Clin then
-                              --ICDInst.ReadRateHistory(Msg, ICDInst,Net);
-                              Network.DebugPrintMessage(Msg); 
-                              Response := ICD.ReadRateHistory(Msg, ICDInst);
-
-                              --Network.DebugPrintMessage(Response); New_Line;
-                              --Put("ahaa");
-                              Network.SendMessage(Net, Response);
-                              --Put("ahaa");
-
-
-                          end if;
-                      else
-                          null;
+                          Network.DebugPrintMessage(Msg); 
+                          -- Get the response message.
+                          Response := ICD.ReadRateHistory(Msg, ICDInst);
+                          -- Sent the response message.
+                          Network.SendMessage(Net, Response);
                       end if;
-                      
+                  
+                  -- Process the message with ReadSettingsRequest type. 
                   when ReadSettingsRequest =>
-
-                      --Network.DebugPrintMessage(Msg);New_Line;
-
-                      if ICDInst.IsModeOn then
-                          --ReadSettings(Msg,ICDInst,Net);
+                      -- Only card and clin could read settings when the ICD 
+                      -- is off.
+                      if (not ICDInst.IsModeOn) and (Msg.RSource = Card or
+                            Msg.RSource = Clin ) then
                           Network.DebugPrintMessage(Msg);New_Line;
-                          --Put("Reading Settins");
+                          -- Get the reponse message. 
                           Response := ICD.ReadSettings(Msg,ICDInst);
-                          --Network.DebugPrintMessage(Response);New_Line;
+                          -- Send the reponse messge.
                           Network.SendMessage(Net, Response);
 
                       end if;
 
-
+                  -- Process the message with ChangeSettingsRequest type. 
                   when ChangeSettingsRequest => 
-                      --Put("11111111");
-                      --Network.DebugPrintMessage(Msg);New_Line;
-
-                      if ICDInst.IsModeOn then
-                          null;
-                      else
-                          if Msg.CSource = Card or Msg.CSource = Clin then
-                              --ChangeSettings(Msg,ICDInst,Net);
-                              Network.DebugPrintMessage(Msg);New_Line;
-                              Response := ICD.ChangeSettings(Msg, ICDInst);
-                              --Network.DebugPrintMessage(Response);New_Line;
-                              Network.SendMessage(Net, Response);
-                          end if;
+                      -- Only card and clin could read settings when the ICD 
+                      -- is on.
+                      if (not ICDInst.IsModeOn) and (Msg.CSource = Card or
+                          Msg.CSource = Clin) then        
+                          Network.DebugPrintMessage(Msg);New_Line;
+                          -- Get the reponse message. 
+                          Response := ICD.ChangeSettings(Msg, ICDInst);
+                          -- Send the reponse messge.
+                          Network.SendMessage(Net, Response);
                       end if;
 
                   when others =>
@@ -153,14 +135,14 @@ package body ClosedLoop is
               
 
           end if;
+          -- Tick all components.
           Heart.Tick(Hrt);
           HRM.Tick(HRMInst, Hrt);
           Network.Tick(Net);
           ICD.Tick(ICDInst, HRMInst, Gen);
-
-          if ICDInst.IsModeOn then
           ImpulseGenerator.Tick(Gen, Hrt);
-          end if;
+
+          -- Used to debug
           Put("heart rate  = ");
           Put(Item => hrt.Rate);
           Put("      ");
@@ -169,9 +151,8 @@ package body ClosedLoop is
           
           
           New_Line;
-          --Network.Tick(Net);
-          
-          --delay 0.1;
+                    
+          delay 0.1;
   end Tick;
 
 
